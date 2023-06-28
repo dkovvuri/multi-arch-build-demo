@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AMD_SERVICE=$(aws cloudformation describe-stacks --stack-name ecs-task-demo --query 'Stacks[0].Outputs[?OutputKey==`AMDService`].OutputValue' --output text)
+AMD_SERVICE=$(aws cloudformation describe-stacks --stack-name ecs-task-demo --query 'Stacks[0].Outputs[?OutputKey==`AMDService`].OutputValue' --output text --region us-east-1)
 
 # Define the function to invoke the stress test endpoint
 invoke_stress_test() {
