@@ -17,7 +17,7 @@ do
   {
     for ((j=1; j<=$NUM_REQUESTS/$CONCURRENCY; j++))
     do
-      curl -s -o /dev/null $URL
+      curl -s $URL
     done
   } &
 done
