@@ -4,7 +4,7 @@ Description:
 Parameters:
   Image: 
     Type: String
-    Default: "834212829299.dkr.ecr.us-east-1.amazonaws.com/mywebapp:latest"
+    Default: "<account>.dkr.ecr.us-east-1.amazonaws.com/mywebapp:latest"
     Description: "Please reference an existing image here."
   TaskCpu:
     Type: String
