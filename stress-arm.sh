@@ -1,9 +1,11 @@
 #!/bin/bash
 
+ARM_SERVICE=$(aws cloudformation describe-stacks --stack-name ecs-task-demo --query 'Stacks[0].Outputs[?OutputKey==`ARMService`].OutputValue' --output text)
+
 # Define the function to invoke the stress test endpoint
 invoke_stress_test() {
   while true; do
-    curl -sS "http://localhost:8080/stress?number=99999999999999"
+    curl -sS "http://$ARM_SERVICE/stress?number=99999999999999"
     sleep 0.1  # Adjust the sleep duration as needed
   done
 }

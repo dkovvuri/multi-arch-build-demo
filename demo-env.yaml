@@ -1,0 +1,253 @@
+Description: 
+  Creates task-definition for launch ARM / AMD64 task definitions.
+
+Parameters:
+  Image: 
+    Type: String
+    Default: "834212829299.dkr.ecr.us-east-1.amazonaws.com/mywebapp:latest"
+    Description: "Please reference an existing image here."
+  TaskCpu:
+    Type: String
+    Default: '1024'
+    Description: "Please reference an existing image here."
+  TaskMemory:
+    Type: String
+    Default: '3072'
+    Description: "Please reference an existing image here."
+  ECSClusterName:
+    Type: String
+    Default: Cluster
+  SecurityGroupIDs:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+  SubnetIDs:
+    Type: List<AWS::EC2::Subnet::Id>
+  VpcID:
+    Type: AWS::EC2::VPC::Id
+    
+Resources:
+  AMDTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: stress-multi-arch
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      ContainerDefinitions:
+      - Name: web-server
+        Image: !Ref Image
+        Cpu: 0
+        PortMappings:
+        - Name: web-server-8080-tcp
+          ContainerPort: 8080
+          HostPort: 8080
+          Protocol: tcp
+          AppProtocol: http
+        Essential: true
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-create-group: 'true'
+            awslogs-group: !Sub '/ecs/${AWS::StackName}'
+            awslogs-region: !Ref AWS::Region
+            awslogs-stream-prefix: ecs
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - EC2
+        - FARGATE
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+  ARMTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: stress-multi-arch
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      ContainerDefinitions:
+      - Name: web-server
+        Image: !Ref Image
+        Cpu: 0
+        PortMappings:
+        - Name: web-server-8080-tcp
+          ContainerPort: 8080
+          HostPort: 8080
+          Protocol: tcp
+          AppProtocol: http
+        Essential: true
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-create-group: 'true'
+            awslogs-group: !Sub '/ecs/${AWS::StackName}'
+            awslogs-region: !Ref AWS::Region
+            awslogs-stream-prefix: ecs
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - EC2
+        - FARGATE
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  TaskLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/${AWS::StackName}'
+      RetentionInDays: 30
+
+  ARMECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: Cluster
+      TaskDefinition: !Ref ARMTaskDefinition
+      LaunchType: FARGATE
+      ServiceName: ARMService
+      SchedulingStrategy: REPLICA
+      DesiredCount: 1
+      LoadBalancers:
+      - ContainerName: web-server
+        ContainerPort: 8080
+        LoadBalancerName:
+          Ref: AWS::NoValue
+        TargetGroupArn:
+          Ref: ARMTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            Ref: SecurityGroupIDs
+          Subnets:
+            Ref: SubnetIDs
+      PlatformVersion: LATEST
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: false
+          Rollback: false
+      DeploymentController:
+        Type: ECS
+      ServiceConnectConfiguration:
+        Enabled: false
+      EnableECSManagedTags: true
+    DependsOn:
+    - ARMListener
+  ARMLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Name: arm-service
+      SecurityGroups:
+        Ref: SecurityGroupIDs
+      Subnets:
+        Ref: SubnetIDs
+  ARMTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: "/"
+      Name: arm-service-tg
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckProtocol: HTTP
+      VpcId:
+        Ref: VpcID
+  ARMListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: ARMTargetGroup
+      LoadBalancerArn:
+        Ref: ARMLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  AMDECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: Cluster
+      TaskDefinition: !Ref AMDTaskDefinition
+      LaunchType: FARGATE
+      ServiceName: AMDService
+      SchedulingStrategy: REPLICA
+      DesiredCount: 1
+      LoadBalancers:
+      - ContainerName: web-server
+        ContainerPort: 8080
+        LoadBalancerName:
+          Ref: AWS::NoValue
+        TargetGroupArn:
+          Ref: AMDTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            Ref: SecurityGroupIDs
+          Subnets:
+            Ref: SubnetIDs
+      PlatformVersion: LATEST
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: false
+          Rollback: false
+      DeploymentController:
+        Type: ECS
+      ServiceConnectConfiguration:
+        Enabled: false
+      Tags: []
+      EnableECSManagedTags: true
+    DependsOn:
+    - AMDListener
+  AMDLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Name: amd-service
+      SecurityGroups:
+        Ref: SecurityGroupIDs
+      Subnets:
+        Ref: SubnetIDs
+  AMDTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: "/"
+      Name: amd-service-tg
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckProtocol: HTTP
+      VpcId:
+        Ref: VpcID
+  AMDListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: AMDTargetGroup
+      LoadBalancerArn:
+        Ref: AMDLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+Outputs:
+  AMDService:
+    Value: !GetAtt AMDLoadBalancer.DNSName
+  ARMService:
+    Value: !GetAtt ARMLoadBalancer.DNSName

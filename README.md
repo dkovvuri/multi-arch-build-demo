@@ -3,7 +3,7 @@ Demo: Multi Architecture Image Builds
 
 Multi-architecture container images consist of two main parts: layers and a manifest. Each container image has one or more layers of file system content. The manifest specifies the groups of layers that make up the image as well as its runtime characteristics, either ARM64 and X86_64.
 
-This allows you to have the same repository that supports multiple architectures, and the container runtime does the work of selecting which image layers to pull based on the system architecture, including ARM64. To learn more, visit Introducing multi-architecture container images for Amazon ECR.
+This allows you to have the same repository that supports multiple architectures, and the container runtime does the work of selecting which image layers to pull based on the system architecture, including ARM64.
 
 ![Manifest](manifest.jpg)
 
@@ -52,10 +52,26 @@ docker manifest inspect $ECR_URL/mywebapp:latest
 
 ### Build and Push
 
+```
 docker buildx create --name mybuilder
+
 docker buildx use mybuilder
-docker buildx build -f buildx.Dockerfile --platform linux/amd64,linux/arm64 -t $ECR_URL/mywebapp:buildx --push .
+
+docker buildx build -f buildx.Dockerfile --platform "linux/amd64,linux/arm64" -t $ECR_URL/mywebapp:buildx --push .
+```
 
 ### Inspect Manifest
 
+```
 docker manifest inspect $ECR_URL/mywebapp:buildx
+```
+
+### Create Demo Env
+
+```
+aws cloudformation create-stack --stack-name ecs-task-demo --template-body file://demo-env.yaml --capabilities CAPABILITY_NAMED_IAM
+
+./stress-amd.sh 
+
+./stress-arm.sh
+```
