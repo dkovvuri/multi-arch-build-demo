@@ -1,3 +1,11 @@
+Demo: Multi Architecture Image Builds
+====
+
+Multi-architecture container images consist of two main parts: layers and a manifest. Each container image has one or more layers of file system content. The manifest specifies the groups of layers that make up the image as well as its runtime characteristics, either ARM64 and X86_64.
+
+This allows you to have the same repository that supports multiple architectures, and the container runtime does the work of selecting which image layers to pull based on the system architecture, including ARM64. To learn more, visit Introducing multi-architecture container images for Amazon ECR.
+
+![Manifest](manifest.jpg)
 
 Commands
 ========
