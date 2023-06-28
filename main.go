@@ -55,7 +55,7 @@ func stressHandler(w http.ResponseWriter, r *http.Request) {
 	// Stop the timer and calculate the duration
 	duration := time.Since(startTime)
 
-	fmt.Fprintln(duration.String())
+	fmt.Fprintln(w, duration.String())
 }
 
 func calculateSquareRoot(number float64) {
